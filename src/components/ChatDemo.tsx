@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { useSWROpenAI, useSWRCompletion } from '@/hooks/useSWROpenAI';
+import { useEffect, useState } from 'react';
+import { useSWROpenAI, useSWRCompletion, useSWRValidation } from '@/hooks/useSWROpenAI';
 
 export default function ChatDemo() {
     const [input, setInput] = useState('');
     const [completionInput, setCompletionInput] = useState('');
+    const [validationInput, setValidationInput] = useState('');
 
     // Chat conversation hook
     const { messages, sendMessage, clearMessages, isLoading, error } = useSWROpenAI({
@@ -21,6 +22,21 @@ export default function ChatDemo() {
     } = useSWRCompletion({
         model: 'gpt-3.5-turbo'
     });
+
+    const {
+        validateOutput,
+        isLoading: validationLoading,
+        error: validationError,
+        data: validationData
+    } = useSWRValidation({
+        model: 'gpt-3.5-turbo'
+    });
+
+    useEffect(() => {
+        if (validationData) {
+            console.log('Validation successful:', validationData);
+        }
+    }, [validationData]);
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -43,6 +59,18 @@ export default function ChatDemo() {
             setCompletionInput('');
         } catch (err) {
             console.error('Failed to get completion:', err);
+        }
+    };
+
+    const handleCompletionValidation = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!validationInput.trim()) return;
+
+        try {
+            await validateOutput(validationInput);
+            setValidationInput('');
+        } catch (err) {
+            console.error('Failed to validate output:', err);
         }
     };
 
@@ -137,7 +165,9 @@ export default function ChatDemo() {
                 {completionData && (
                     <div className="mt-6 p-4 bg-green-50 border-2 border-green-300 rounded-lg">
                         <div className="font-medium text-green-800 mb-2">Completion Result:</div>
-                        <div className="whitespace-pre-wrap text-green-700">{completionData.message}</div>
+                        <div className="whitespace-pre-wrap text-green-700">
+                            {typeof completionData.message === 'string' ? completionData.message : JSON.stringify(completionData.message)}
+                        </div>
                         {completionData.usage && (
                             <div className="mt-2 text-sm text-green-600">
                                 Tokens used: {completionData.usage.total_tokens}
@@ -151,6 +181,46 @@ export default function ChatDemo() {
                 {completionError && (
                     <div className="mt-4 p-3 bg-red-100 border-2 border-red-400 text-red-700 rounded-lg">
                         Error: {completionError}
+                    </div>
+                )}
+            </div>
+
+            {/* Completion Section Schematic Validation*/}
+            <div className="border-2 border-gray-300 rounded-lg p-6 bg-white shadow-sm">
+                <h2 className="text-2xl font-semibold mb-4">Output Validation</h2>
+
+                <form onSubmit={handleCompletionValidation} className="space-y-4">
+                    <div>
+                        <textarea
+                            value={validationInput}
+                            onChange={(e) => setValidationInput(e.target.value)}
+                            placeholder="Enter a prompt for validation..."
+                            className="w-full p-3 border-2 border-gray-300 rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                            disabled={completionLoading}
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={validationLoading || !validationInput.trim()}
+                        className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {validationLoading ? 'Generating...' : 'Complete'}
+                    </button>
+                </form>
+
+                {validationData && (
+                    <div className="mt-6 p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+                        <div className="font-medium text-green-800 mb-2">Validation Result:</div>
+                        <div className="whitespace-pre-wrap text-green-700">
+                            {typeof validationData.message === 'string' ? validationData.message : JSON.stringify(validationData.message)}
+                        </div>
+                        {/* Usage information is not available for validationData */}
+                    </div>
+                )}
+
+                {validationError && (
+                    <div className="mt-4 p-3 bg-red-100 border-2 border-red-400 text-red-700 rounded-lg">
+                        Error: {validationError}
                     </div>
                 )}
             </div>

@@ -20,10 +20,15 @@ interface ChatRequest {
   model?: string;
 }
 
+interface ValidationRequest {
+  message: string;
+  model?: string;
+}
+
 // Fetcher function for useSWRMutation
 async function sendChatRequest(
   url: string,
-  { arg }: { arg: ChatRequest }
+  { arg }: { arg: ChatRequest | ValidationRequest }
 ): Promise<ChatResponse> {
   const response = await fetch(url, {
     method: "POST",
@@ -141,6 +146,35 @@ export function useSWRCompletion(options: UseSWROpenAIOptions = {}) {
 
   return {
     complete,
+    isLoading,
+    error: error?.message || null,
+    data,
+    reset,
+  };
+}
+
+// Step #2: Hook for validation output using SWR
+export function useSWRValidation(options: UseSWROpenAIOptions = {}) {
+  const {
+    trigger,
+    data,
+    error,
+    isMutating: isLoading,
+    reset,
+  } = useSWRMutation("/api/outputValidation", sendChatRequest);
+
+  const validateOutput = useCallback(
+    async (prompt: string): Promise<ChatResponse | undefined> => {
+      return trigger({
+        message: prompt,
+        model: options.model || "gpt-3.5-turbo",
+      });
+    },
+    [trigger, options.model]
+  );
+
+  return {
+    validateOutput,
     isLoading,
     error: error?.message || null,
     data,
