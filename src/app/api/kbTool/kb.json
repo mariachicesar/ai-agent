@@ -1,0 +1,24 @@
+{
+    "records": [
+        {
+            "id": 1,
+            "question": "What is the return policy?",
+            "answer": "You can return any item within 30 days of purchase."
+        },
+        {
+            "id": 2,
+            "question": "What payment methods are accepted?",
+            "answer": "We accept credit cards, PayPal, and bank transfers."
+        },
+        {
+            "id": 3,
+            "question": "How do I track my order?",
+            "answer": "You can track your order using the tracking link sent to your email."
+        },
+        {
+            "id": 4,
+            "question": "What is the warranty period?",
+            "answer": "The warranty period is one year from the date of purchase."
+        }
+    ]
+}
