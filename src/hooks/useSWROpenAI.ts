@@ -213,3 +213,35 @@ export function useSWRTool(options: UseSWROpenAIOptions = {}) {
     reset,
   };
 }
+
+// Step #4: Hook for knowledge base tool calling using SWR
+export function useSWRKBTool(options: UseSWROpenAIOptions = {}) {
+  const {
+    trigger,
+    data,
+    error,
+    isMutating: isLoading,
+    reset,
+  } = useSWRMutation("/api/kbTool", sendChatRequest);
+
+  const callKBTool = useCallback(
+    async (input: string): Promise<ChatResponse | undefined> => {
+      // Convert the input string to a messages array format
+      const messages: Message[] = [{ role: "user", content: input }];
+
+      return trigger({
+        messages,
+        model: options.model || "gpt-3.5-turbo",
+      });
+    },
+    [trigger, options.model]
+  );
+
+  return {
+    callKBTool,
+    isLoading,
+    error: error?.message || null,
+    data,
+    reset,
+  };
+}
