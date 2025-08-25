@@ -36,4 +36,4 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
 Step 2: Structure Output Validation
-Step 3: Function calling - Tools
+Step 3: Function calling - Tools https://platform.openai.com/docs/guides/function-calling
