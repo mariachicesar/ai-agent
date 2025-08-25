@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSWROpenAI, useSWRCompletion, useSWRValidation } from '@/hooks/useSWROpenAI';
+import { useSWROpenAI, useSWRCompletion, useSWRValidation, useSWRTool } from '@/hooks/useSWROpenAI';
 
 export default function ChatDemo() {
     const [input, setInput] = useState('');
     const [completionInput, setCompletionInput] = useState('');
     const [validationInput, setValidationInput] = useState('');
+    const [toolInput, setToolInput] = useState('');
 
     // Chat conversation hook
     const { messages, sendMessage, clearMessages, isLoading, error } = useSWROpenAI({
@@ -22,13 +23,23 @@ export default function ChatDemo() {
     } = useSWRCompletion({
         model: 'gpt-3.5-turbo'
     });
-
+    // Validation example hook
     const {
         validateOutput,
         isLoading: validationLoading,
         error: validationError,
         data: validationData
     } = useSWRValidation({
+        model: 'gpt-3.5-turbo'
+    });
+
+    // Tool calling example hook
+    const {
+        callTool,
+        isLoading: toolLoading,
+        error: toolError,
+        data: toolData
+    } = useSWRTool({
         model: 'gpt-3.5-turbo'
     });
 
@@ -71,6 +82,18 @@ export default function ChatDemo() {
             setValidationInput('');
         } catch (err) {
             console.error('Failed to validate output:', err);
+        }
+    };
+
+    const handleToolCalling = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!toolInput.trim()) return;
+
+        try {
+            await callTool(toolInput);
+            setToolInput('');
+        } catch (err) {
+            console.error('Failed to call tool:', err);
         }
     };
 
@@ -187,7 +210,7 @@ export default function ChatDemo() {
 
             {/* Completion Section Schematic Validation*/}
             <div className="border-2 border-gray-300 rounded-lg p-6 bg-white shadow-sm">
-                <h2 className="text-2xl font-semibold mb-4">Output Validation</h2>
+                <h2 className="text-2xl font-semibold mb-4">Output Validation for Calendar Events</h2>
 
                 <form onSubmit={handleCompletionValidation} className="space-y-4">
                     <div>
@@ -221,6 +244,45 @@ export default function ChatDemo() {
                 {validationError && (
                     <div className="mt-4 p-3 bg-red-100 border-2 border-red-400 text-red-700 rounded-lg">
                         Error: {validationError}
+                    </div>
+                )}
+            </div>
+            {/* Tool Calling Input*/}
+            <div className="border-2 border-gray-300 rounded-lg p-6 bg-white shadow-sm">
+                <h2 className="text-2xl font-semibold mb-4">Tool Calling</h2>
+
+                <form onSubmit={handleToolCalling} className="space-y-4">
+                    <div>
+                        <textarea
+                            value={toolInput}
+                            onChange={(e) => setToolInput(e.target.value)}
+                            placeholder="Enter a prompt for validation..."
+                            className="w-full p-3 border-2 border-gray-300 rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                            disabled={toolLoading}
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={toolLoading || !toolInput.trim()}
+                        className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {toolLoading ? 'Generating...' : 'Complete'}
+                    </button>
+                </form>
+
+                {toolData && (
+                    <div className="mt-6 p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+                        <div className="font-medium text-green-800 mb-2">Tool Result:</div>
+                        <div className="whitespace-pre-wrap text-green-700">
+                            {typeof toolData.message === 'string' ? toolData.message : JSON.stringify(toolData.message)}
+                        </div>
+                        {/* Usage information is not available for toolData */}
+                    </div>
+                )}
+
+                {toolError && (
+                    <div className="mt-4 p-3 bg-red-100 border-2 border-red-400 text-red-700 rounded-lg">
+                        Error: {toolError}
                     </div>
                 )}
             </div>

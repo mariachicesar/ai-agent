@@ -181,3 +181,35 @@ export function useSWRValidation(options: UseSWROpenAIOptions = {}) {
     reset,
   };
 }
+
+// Step #3: Hook for tool calling using SWR
+export function useSWRTool(options: UseSWROpenAIOptions = {}) {
+  const {
+    trigger,
+    data,
+    error,
+    isMutating: isLoading,
+    reset,
+  } = useSWRMutation("/api/tool", sendChatRequest);
+
+  const callTool = useCallback(
+    async (input: string): Promise<ChatResponse | undefined> => {
+      // Convert the input string to a messages array format
+      const messages: Message[] = [{ role: "user", content: input }];
+
+      return trigger({
+        messages,
+        model: options.model || "gpt-3.5-turbo",
+      });
+    },
+    [trigger, options.model]
+  );
+
+  return {
+    callTool,
+    isLoading,
+    error: error?.message || null,
+    data,
+    reset,
+  };
+}
