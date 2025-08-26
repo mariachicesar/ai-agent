@@ -1,13 +1,32 @@
 "use client"
+import { useAgentPromptChain } from "@/hooks/useSwrAgent";
 import Link from "next/link";
 import { useState } from "react";
 
 const CalendarAgentPage = () => {
-    const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
+    const [selectedWorkflow, setSelectedWorkflow] = useState<string>("default");
+    const [userInput, setUserInput] = useState<string>("");
+
+    const { sendMessage, data, isLoading, error, messages } = useAgentPromptChain();
 
     const handleWorkflowClick = (workflow: string) => {
         setSelectedWorkflow(workflow);
     }
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!userInput.trim()) return;
+
+        // Call the function to process the user input
+        console.log("User Input:", userInput);
+        try {
+            await sendMessage(userInput, selectedWorkflow);
+            setUserInput(""); // Clear input after successful submission
+        } catch (err) {
+            console.error("Failed to send message:", err);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
             {/* Header Section */}
@@ -156,33 +175,74 @@ const CalendarAgentPage = () => {
                                         </svg>
                                     </div>
                                     <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
-                                        Implementation Guidelines
+                                        Implementation
                                     </h3>
-                                    <p className="text-gray-600 dark:text-gray-400">
-                                        Key principles from Anthropic&apos;s production experience with AI agents
-                                    </p>
                                 </div>
+                                <form onSubmit={handleSubmit}>
+                                    <label htmlFor="calendar-prompt" className="sr-only">Calendar Prompt</label>
+                                    <div className="grid gap-6 mb-6">
+                                        <input
+                                            id="calendar-prompt"
+                                            className="border border-gray-300 dark:border-gray-600 rounded-lg p-2"
+                                            placeholder="Enter your calendar-related prompt here"
+                                            value={userInput}
+                                            onChange={(e) => setUserInput(e.target.value)}
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={!userInput.trim() || isLoading}
+                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+                                        >
+                                            {isLoading ? "Processing..." : "Send Message"}
+                                        </button>
+                                    </div>
+                                </form>
 
-                                <div className="grid md:grid-cols-2 gap-6 mb-6">
-                                    <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
-                                            <span className="w-6 h-6 bg-green-100 dark:bg-green-900 rounded text-green-600 dark:text-green-400 text-sm flex items-center justify-center mr-2">✓</span>
-                                            Start Simple
-                                        </h4>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            Find the simplest solution possible. Add complexity only when needed. Often optimizing single LLM calls is enough.
-                                        </p>
+                                {/* Results Section */}
+                                {(messages.length > 0 || error) && (
+                                    <div className="mt-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Results</h4>
+
+                                        {error && (
+                                            <div className="mb-4 p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-lg">
+                                                <strong>Error:</strong> {error}
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-4">
+                                            {messages.map((message, index) => (
+                                                <div
+                                                    key={index}
+                                                    className={`p-4 rounded-lg ${message.role === "user"
+                                                            ? "bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100"
+                                                            : "bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-100"
+                                                        }`}
+                                                >
+                                                    <div className="font-semibold mb-2 capitalize">
+                                                        {message.role === "user" ? "You" : "AI Assistant"}
+                                                    </div>
+                                                    <div className="whitespace-pre-wrap">{message.content}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {data && (
+                                            <div className="mt-4 p-4 bg-yellow-100 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-100 rounded-lg">
+                                                <h5 className="font-semibold mb-2">Usage Stats:</h5>
+                                                <p className="text-sm">
+                                                    Workflow: <span className="font-medium">{selectedWorkflow}</span>
+                                                    {data.usage && (
+                                                        <>
+                                                            <br />
+                                                            Tokens: {data.usage.prompt_tokens} prompt + {data.usage.completion_tokens} completion = {data.usage.total_tokens} total
+                                                        </>
+                                                    )}
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
-                                            <span className="w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded text-blue-600 dark:text-blue-400 text-sm flex items-center justify-center mr-2">⚖</span>
-                                            Consider Trade-offs
-                                        </h4>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            Agentic systems trade latency and cost for better task performance. Evaluate when this makes sense.
-                                        </p>
-                                    </div>
-                                </div>
+                                )}
+
 
                                 <div className="text-center space-y-4">
                                     <div className="flex flex-wrap justify-center gap-2 mb-4">

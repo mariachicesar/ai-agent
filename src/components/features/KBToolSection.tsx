@@ -36,7 +36,7 @@ export default function KnowledgeBaseToolSection() {
     };
 
     return (
-        <SectionCard title="Knowledge Base Tool Section: First checks question to try to match to our json mock data before calling the tool and LLM">
+        <SectionCard title="Knowledge Base Tool Section: OpenAi (LLM) Determines if we must search knowledge base (mock data from DB), We have a search function, OpenAi generates a natural response">
             <TextAreaForm
                 value={input}
                 onChange={setInput}
