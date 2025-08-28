@@ -46,19 +46,41 @@ async function sendChatRequest(
   return response.json();
 }
 
+// Add workflow to API route mapping
+const getApiRoute = (workflow: string): string => {
+  const routeMap: Record<string, string> = {
+    promptChaining: "/api/promptChaining",
+    routing: "/api/routing",
+    parallelization: "/api/parallelization",
+    // Keep default fallback
+    default: "/api/agent",
+  };
+
+  return routeMap[workflow] || "/api/agent"; // default fallback
+};
+
 export function useAgentPromptChain() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [currentWorkflow, setCurrentWorkflow] = useState<string>("chat");
 
+  // Remove the fixed URL and use a dynamic key
   const {
     trigger,
     data,
     error,
     isMutating: isLoading,
     reset,
-  } = useSWRMutation("/api/agent", sendChatRequest);
+  } = useSWRMutation(
+    currentWorkflow,
+    (key, { arg }: { arg: ChatRequest | ValidationRequest }) =>
+      sendChatRequest(getApiRoute(key), { arg })
+  );
 
   const sendMessage = useCallback(
     async (userMessage: string, workflow: string, systemMessage?: string) => {
+      // Update current workflow first
+      setCurrentWorkflow(workflow);
+
       // [] empty array where we push to keep track of messages
       const newMessages: Message[] = [...messages];
 
@@ -106,5 +128,6 @@ export function useAgentPromptChain() {
     error: error?.message || null,
     data,
     reset,
+    currentWorkflow,
   };
 }

@@ -27,13 +27,13 @@ const EventConfirmation = z.object({
 
 //Define the functions
 const extractEventInfo = async (message: string) => {
+  const localDate = new Date();
   const response = await openai.responses.parse({
     model: "gpt-4o-2024-08-06",
     input: [
       {
         role: "system",
-        content:
-          "You are a helpful assistant determine if the input is a calendar event information and give a confidence score for the extraction.",
+        content: `${localDate.toISOString()} You are a helpful assistant determine if the input is a calendar event information and give a confidence score for the extraction.`,
       },
       { role: "user", content: message },
     ],
@@ -153,17 +153,24 @@ async function executeFunction(name: string, args: Record<string, unknown>) {
       return await extractEventInfo(args.message as string);
     case "extractEventDetails":
       return await extractEventDetails(args.message as string);
-    case "extractEventConfirmation":
-      return await extractEventConfirmation(
-        args.eventDetails as z.infer<typeof EventDetails>
-      );
+    case "extractEventConfirmation": {
+      console.log("args:", args);
+      // Ensure eventDetails is passed correctly
+      const eventDetails = args.eventDetails as z.infer<typeof EventDetails>;
+      if (!eventDetails) {
+        throw new Error(
+          "Missing eventDetails argument for extractEventConfirmation"
+        );
+      }
+      return await extractEventConfirmation(eventDetails);
+    }
     default:
       throw new Error(`Unknown function: ${name}`);
   }
 }
 
 export async function POST(request: Request) {
-  const { messages, model = "gpt-3.5-turbo" } = await request.json();
+  const { messages, model = "gpt-4o-2024-08-06" } = await request.json();
 
   if (!messages || !Array.isArray(messages)) {
     return new Response(
@@ -198,8 +205,17 @@ export async function POST(request: Request) {
       tool_choice: "auto", // Let OpenAI decide when to use tools
     });
 
-    // Process tool calls in a loop to handle chaining
-    while (completion.choices[0]?.message?.tool_calls) {
+    // Process tool calls with retry limit to prevent infinite loops
+    const maxRetries = 5;
+    let retryCount = 0;
+    let extractedEventDetails: z.infer<typeof EventDetails> | null = null;
+
+    while (
+      completion.choices[0]?.message?.tool_calls &&
+      retryCount < maxRetries
+    ) {
+      console.log(`Tool call iteration: ${retryCount + 1}/${maxRetries}`);
+
       const message = completion.choices[0].message;
 
       // Add the assistant's message with tool calls to conversation
@@ -219,8 +235,29 @@ export async function POST(request: Request) {
 
             console.log(`Executing function: ${functionName}`, functionArgs);
 
+            // Handle extractEventConfirmation specially - use extracted details from previous call
+            if (
+              functionName === "extractEventConfirmation" &&
+              extractedEventDetails
+            ) {
+              functionArgs.eventDetails = extractedEventDetails;
+            }
+
             // Execute the function
             const result = await executeFunction(functionName, functionArgs);
+
+            // Store event details for the next function call
+            if (functionName === "extractEventDetails") {
+              try {
+                extractedEventDetails = JSON.parse(result.output_text);
+                console.log(
+                  "Stored event details for next function:",
+                  extractedEventDetails
+                );
+              } catch (parseError) {
+                console.error("Failed to parse event details:", parseError);
+              }
+            }
 
             // Add the tool result to conversation
             conversationMessages.push({
@@ -239,6 +276,16 @@ export async function POST(request: Request) {
             });
           }
         }
+      }
+
+      retryCount++;
+
+      // Break if we've reached max retries
+      if (retryCount >= maxRetries) {
+        console.log(
+          `Reached maximum retry limit (${maxRetries}), breaking tool call chain`
+        );
+        break;
       }
 
       // Make another OpenAI call to continue the chain or get final response

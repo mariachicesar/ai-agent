@@ -30,7 +30,7 @@ const CalendarEvent = z.object({
 // Step #2: Validate the request and extract event information
 export async function POST(request: NextRequest) {
   try {
-    const { message, model = "gpt-3.5-turbo" } = await request.json();
+    const { message } = await request.json();
 
     if (!message || typeof message !== "string") {
       return NextResponse.json(
