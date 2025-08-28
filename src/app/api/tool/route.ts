@@ -79,7 +79,7 @@ async function get_weather(
  * that tells OpenAI what functions are available and how to use them.
  *
  * 🔍 STUDY NOTES:
- * - OpenAI uses this description to decide WHEN to call the function
+ * - OpenAI uses this description to decide WHEN to call the functionl
  * - The description should be clear and specific
  * - Parameters must match exactly what your function expects
  * - OpenAI will use this to generate the correct arguments
