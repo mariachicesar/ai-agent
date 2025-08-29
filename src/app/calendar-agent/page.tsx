@@ -184,7 +184,7 @@ const CalendarAgentPage = () => {
                                         <input
                                             id="calendar-prompt"
                                             className="border border-gray-300 dark:border-gray-600 rounded-lg p-2"
-                                            placeholder="Enter your calendar-related prompt here"
+                                            placeholder="Ex. Schedule a meeting with John next Tuesday at 1pm for 30min"
                                             value={userInput}
                                             onChange={(e) => setUserInput(e.target.value)}
                                         />
@@ -214,8 +214,8 @@ const CalendarAgentPage = () => {
                                                 <div
                                                     key={index}
                                                     className={`p-4 rounded-lg ${message.role === "user"
-                                                            ? "bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100"
-                                                            : "bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-100"
+                                                        ? "bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100"
+                                                        : "bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-100"
                                                         }`}
                                                 >
                                                     <div className="font-semibold mb-2 capitalize">
@@ -227,17 +227,43 @@ const CalendarAgentPage = () => {
                                         </div>
 
                                         {data && (
-                                            <div className="mt-4 p-4 bg-yellow-100 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-100 rounded-lg">
-                                                <h5 className="font-semibold mb-2">Usage Stats:</h5>
-                                                <p className="text-sm">
-                                                    Workflow: <span className="font-medium">{selectedWorkflow}</span>
-                                                    {data.usage && (
-                                                        <>
-                                                            <br />
-                                                            Tokens: {data.usage.prompt_tokens} prompt + {data.usage.completion_tokens} completion = {data.usage.total_tokens} total
-                                                        </>
-                                                    )}
-                                                </p>
+                                            <div className="mt-4 space-y-4">
+                                                <div className="p-4 bg-yellow-100 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-100 rounded-lg">
+                                                    <h5 className="font-semibold mb-2">Usage Stats:</h5>
+                                                    <p className="text-sm">
+                                                        Workflow: <span className="font-medium">{selectedWorkflow}</span>
+                                                        {data.usage && (
+                                                            <>
+                                                                <br />
+                                                                Tokens: {data.usage.prompt_tokens} prompt + {data.usage.completion_tokens} completion = {data.usage.total_tokens} total
+                                                            </>
+                                                        )}
+                                                        {data.confidenceScore && (
+                                                            <>
+                                                                <br />
+                                                                Confidence Score: {(data.confidenceScore * 100).toFixed(1)}%
+                                                            </>
+                                                        )}
+                                                    </p>
+                                                </div>
+
+                                                {/* Calendar Link Section */}
+                                                {data.calendarLink && (
+                                                    <div className="p-4 bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-100 rounded-lg">
+                                                        <h5 className="font-semibold mb-2">📅 Add to Calendar</h5>
+                                                        <a
+                                                            href={data.calendarLink}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                                                        >
+                                                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                            </svg>
+                                                            Add to Google Calendar
+                                                        </a>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -245,14 +271,7 @@ const CalendarAgentPage = () => {
 
 
                                 <div className="text-center space-y-4">
-                                    <div className="flex flex-wrap justify-center gap-2 mb-4">
-                                        <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
-                                            Workflows: Predictable paths
-                                        </span>
-                                        <span className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full text-sm font-medium">
-                                            Agents: Flexible decisions
-                                        </span>
-                                    </div>
+
                                     <a
                                         href="https://www.anthropic.com/engineering/building-effective-agents"
                                         target="_blank"
