@@ -1,7 +1,11 @@
 /**
  * Knowledge Base Tool Section Component
  * 
- * Tool calling functionality for external API integration
+ * Demonstrates intelligent knowledge base integration where the AI automatically 
+ * determines when to search internal knowledge repositories based on user queries.
+ * The LLM analyzes questions, conditionally retrieves relevant information from 
+ * mock database content, and generates natural, contextual responses using the 
+ * retrieved knowledge.
  */
 
 import { useState, FormEvent } from 'react';
@@ -37,13 +41,13 @@ export default function KnowledgeBaseToolSection() {
     };
 
     return (
-        <SectionCard title="Knowledge Base Tool Section: OpenAi (LLM) Determines if we must search knowledge base (mock data from DB), We have a search function, OpenAi generates a natural response">
+        <SectionCard title="Intelligent Knowledge Base Search - AI-Powered Information Retrieval">
             <TextAreaForm
                 value={input}
                 onChange={setInput}
                 onSubmit={handleToolCalling}
                 isLoading={toolLoading}
-                placeholder="Ask about return policy it will look at our mock data for knowledge base response"
+                placeholder="Ask questions about company policies or procedures (e.g., 'What is the return policy?'). The AI will search our knowledge base and provide relevant information."
                 buttonText="Call KB Tool"
                 loadingText="Processing..."
                 buttonColor="purple"
