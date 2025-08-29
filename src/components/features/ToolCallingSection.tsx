@@ -1,7 +1,10 @@
 /**
  * ToolCallingSection Component
  * 
- * Tool calling functionality for external API integration
+ * Demonstrates intelligent tool calling where the AI automatically determines 
+ * when to invoke external APIs based on user input. The LLM analyzes the query 
+ * and conditionally calls weather APIs when location-based weather information 
+ * is requested, then returns structured, formatted responses.
  */
 
 import { useState, FormEvent } from 'react';
@@ -37,7 +40,7 @@ export default function ToolCallingSection() {
     };
 
     return (
-        <SectionCard title="Tool Calling only for Weather + Structure output: OpenAi (LLM) Determines if we must use Weather API">
+        <SectionCard title="Intelligent Tool Calling - Weather API Integration with Structured Output">
             <TextAreaForm
                 value={toolInput}
                 onChange={setToolInput}
