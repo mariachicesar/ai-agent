@@ -50,14 +50,14 @@ async function sendChatRequest(
 // Add workflow to API route mapping
 const getApiRoute = (workflow: string): string => {
   const routeMap: Record<string, string> = {
-    promptChaining: "/api/promptChaining",
+    promptChaining: "/api/prompt-chaining",
     routing: "/api/routing",
     parallelization: "/api/parallelization",
     // Keep default fallback
-    default: "/api/agent",
+    default: "/api/chat",
   };
 
-  return routeMap[workflow] || "/api/agent"; // default fallback
+  return routeMap[workflow] || "/api/chat"; // default fallback
 };
 
 export function useAgentPromptChain() {
