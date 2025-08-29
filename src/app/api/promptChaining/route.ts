@@ -81,24 +81,96 @@ const extractEventDetails = async (message: string) => {
 const extractEventConfirmation = async (
   eventDetails: z.infer<typeof EventDetails>
 ) => {
+  // Generate Google Calendar link manually for better reliability
+  const generateGoogleCalendarLink = (event: z.infer<typeof EventDetails>) => {
+    const baseUrl =
+      "https://calendar.google.com/calendar/render?action=TEMPLATE";
+    const params = new URLSearchParams();
+
+    // Event title
+    params.append("text", event.name);
+
+    // Parse date and duration
+    const eventDate = new Date(event.date);
+    if (!isNaN(eventDate.getTime())) {
+      // Format: YYYYMMDDTHHMMSSZ
+      const startTime = eventDate
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .replace(/\.\d{3}/, "");
+      params.append("dates", `${startTime}/${startTime}`);
+
+      // If duration is provided, calculate end time
+      if (event.duration) {
+        const durationMatch = event.duration.match(
+          /(\d+)\s*(hour|hr|h|minute|min|m)s?/i
+        );
+        if (durationMatch) {
+          const amount = parseInt(durationMatch[1]);
+          const unit = durationMatch[2].toLowerCase();
+
+          const endTime = new Date(eventDate);
+          if (unit.startsWith("h")) {
+            endTime.setHours(endTime.getHours() + amount);
+          } else if (unit.startsWith("m")) {
+            endTime.setMinutes(endTime.getMinutes() + amount);
+          }
+
+          const endTimeFormatted = endTime
+            .toISOString()
+            .replace(/[-:]/g, "")
+            .replace(/\.\d{3}/, "");
+          params.set("dates", `${startTime}/${endTimeFormatted}`);
+        }
+      }
+    }
+
+    // Add participants as details
+    if (event.participants && event.participants.length > 0) {
+      params.append(
+        "details",
+        `Participants: ${event.participants.join(", ")}`
+      );
+    }
+
+    return `${baseUrl}&${params.toString()}`;
+  };
+
+  const googleCalendarLink = generateGoogleCalendarLink(eventDetails);
+
   const response = await openai.responses.parse({
     model: "gpt-4o-2024-08-06",
     input: [
       {
         role: "system",
-        content:
-          "You are a helpful assistant that confirms calendar event details. Generate a Google Calendar if applicable.",
+        content: `You are a helpful assistant that confirms calendar event details. 
+        Create a friendly confirmation message for the event. 
+        IMPORTANT: You must use the exact Google Calendar link provided below - do not generate your own link.
+        Include the provided Google Calendar link in your confirmation message as a clickable link.
+        Format the confirmation message to be clear and professional.`,
       },
       {
         role: "user",
-        content: `Here are the event details: ${JSON.stringify(eventDetails)}`,
+        content: `Here are the event details: ${JSON.stringify(eventDetails)}
+        
+        Google Calendar link to use (use this exact link): ${googleCalendarLink}
+        
+        Please create a confirmation message that includes this exact calendar link.`,
       },
     ],
     text: {
       format: zodTextFormat(EventConfirmation, "event_confirmation"),
     },
   });
-  return response;
+
+  // Ensure the link is properly set
+  const parsed = JSON.parse(response.output_text);
+  parsed.link = googleCalendarLink;
+
+  return {
+    ...response,
+    output_text: JSON.stringify(parsed),
+  };
 };
 
 // Define tools for OpenAI function calling
@@ -343,10 +415,37 @@ export async function POST(request: Request) {
     const finalMessage =
       completion.choices[0]?.message?.content || "No response generated";
 
+    // If we have event confirmation details, extract and include the calendar link
+    let calendarLink = null;
+    if (extractedEventDetails) {
+      // Find the last tool call result that contains calendar confirmation
+      for (let i = conversationMessages.length - 1; i >= 0; i--) {
+        const message = conversationMessages[i];
+        if (message.role === "tool" && typeof message.content === "string") {
+          try {
+            const toolResult = JSON.parse(message.content);
+            if (toolResult.output_text) {
+              const parsed = JSON.parse(toolResult.output_text);
+              if (
+                parsed.link &&
+                parsed.link.includes("calendar.google.com/calendar/render")
+              ) {
+                calendarLink = parsed.link;
+                break;
+              }
+            }
+          } catch {
+            // Continue searching
+          }
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({
         message: finalMessage,
         confidenceScore: eventInfoResult?.confidenceScore || null,
+        calendarLink: calendarLink,
       }),
       {
         status: 200,

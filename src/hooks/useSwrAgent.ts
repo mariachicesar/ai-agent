@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import useSWRMutation from "swr/mutation";
 
 interface Message {
   role: "system" | "user" | "assistant";
@@ -13,6 +12,8 @@ interface ChatResponse {
     completion_tokens: number;
     total_tokens: number;
   };
+  confidenceScore?: number;
+  calendarLink?: string;
 }
 
 interface ChatRequest {
@@ -61,25 +62,17 @@ const getApiRoute = (workflow: string): string => {
 
 export function useAgentPromptChain() {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [currentWorkflow, setCurrentWorkflow] = useState<string>("chat");
-
-  // Remove the fixed URL and use a dynamic key
-  const {
-    trigger,
-    data,
-    error,
-    isMutating: isLoading,
-    reset,
-  } = useSWRMutation(
-    currentWorkflow,
-    (key, { arg }: { arg: ChatRequest | ValidationRequest }) =>
-      sendChatRequest(getApiRoute(key), { arg })
-  );
+  const [currentWorkflow, setCurrentWorkflow] = useState<string>("default");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<ChatResponse | null>(null);
 
   const sendMessage = useCallback(
     async (userMessage: string, workflow: string, systemMessage?: string) => {
-      // Update current workflow first
+      // Update current workflow for tracking
       setCurrentWorkflow(workflow);
+      setIsLoading(true);
+      setError(null);
 
       // [] empty array where we push to keep track of messages
       const newMessages: Message[] = [...messages];
@@ -93,9 +86,12 @@ export function useAgentPromptChain() {
       newMessages.push({ role: "user", content: userMessage });
 
       try {
-        const response = await trigger({
-          messages: newMessages,
-          model: "gpt-3.5-turbo",
+        // Make the request directly to the correct endpoint based on workflow
+        const response = await sendChatRequest(getApiRoute(workflow), {
+          arg: {
+            messages: newMessages,
+            model: "gpt-3.5-turbo",
+          },
         });
 
         if (response) {
@@ -105,27 +101,38 @@ export function useAgentPromptChain() {
             { role: "assistant", content: response.message },
           ];
           setMessages(updatedMessages);
+          setData(response);
           return response;
         }
       } catch (err) {
-        // Error is already handled by SWR
+        const errorMessage =
+          err instanceof Error ? err.message : "An error occurred";
+        setError(errorMessage);
         throw err;
+      } finally {
+        setIsLoading(false);
       }
     },
-    [messages, trigger]
+    [messages]
   );
 
   const clearMessages = useCallback(() => {
     setMessages([]);
-    reset();
-  }, [reset]);
+    setError(null);
+    setData(null);
+  }, []);
+
+  const reset = useCallback(() => {
+    setError(null);
+    setData(null);
+  }, []);
 
   return {
     messages,
     sendMessage,
     clearMessages,
     isLoading,
-    error: error?.message || null,
+    error,
     data,
     reset,
     currentWorkflow,

@@ -276,6 +276,9 @@ export async function POST(request: NextRequest) {
 
       console.log("📝 Added assistant message with tool_calls to conversation");
 
+      // Collect tool execution results for debug info
+      const toolExecutionResults = [];
+
       // Execute each tool call
       for (const toolCall of toolCalls) {
         if (toolCall.type !== "function") {
@@ -302,6 +305,15 @@ export async function POST(request: NextRequest) {
           throw new Error(`Weather data validation failed: ${validationError}`);
         }
 
+        // Store execution details for debug
+        toolExecutionResults.push({
+          toolCallId: toolCall.id,
+          functionName: name,
+          arguments: args,
+          result: result,
+          validated: validatedResult,
+        });
+
         // Add tool response message to the conversation
         // This is how we send the function result back to OpenAI
         messagesWithSystem.push({
@@ -327,10 +339,49 @@ export async function POST(request: NextRequest) {
       console.log("Second OpenAI call completed");
       console.log(completion_2, "completion_2");
 
-      // Return the final response to the user
+      // Return the final response to the user WITH detailed debug information
       console.log("📤 Sending final response to user");
       return NextResponse.json({
         message: completion_2.choices[0]?.message?.content || "No response",
+        debug: {
+          steps: [
+            {
+              step: 1,
+              description: "Initial OpenAI call with tools",
+              data: {
+                model: "gpt-4o-2024-08-06",
+                messagesCount:
+                  messagesWithSystem.length -
+                  toolCalls.length -
+                  toolExecutionResults.length,
+                toolsAvailable: tools.length,
+                response: completion,
+              },
+            },
+            {
+              step: 2,
+              description: "Tool calls detected",
+              data: {
+                toolCallsCount: toolCalls.length,
+                toolCalls: toolCalls,
+              },
+            },
+            {
+              step: 3,
+              description: "Tool execution results",
+              data: toolExecutionResults,
+            },
+            {
+              step: 4,
+              description: "Final OpenAI call with tool results",
+              data: {
+                model: "gpt-3.5-turbo",
+                finalMessagesCount: messagesWithSystem.length,
+                response: completion_2,
+              },
+            },
+          ],
+        },
       });
     }
 
@@ -342,6 +393,21 @@ export async function POST(request: NextRequest) {
     // If OpenAI didn't request any tools, just return its direct response
     return NextResponse.json({
       message: completion.choices[0]?.message?.content || "No response",
+      debug: {
+        steps: [
+          {
+            step: 1,
+            description: "Initial OpenAI call with tools (no tools used)",
+            data: {
+              model: "gpt-4o-2024-08-06",
+              messagesCount: messagesWithSystem.length,
+              toolsAvailable: tools.length,
+              toolCallsCount: 0,
+              response: completion,
+            },
+          },
+        ],
+      },
     });
   } catch (error) {
     // =====================================================================

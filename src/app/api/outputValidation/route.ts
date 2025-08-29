@@ -57,6 +57,43 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       message: event, //now we can use the extracted event information to create a calendar event and build systems around it
+      debug: {
+        steps: [
+          {
+            step: 1,
+            description: "Input validation",
+            data: {
+              userMessage: message,
+              messageType: typeof message,
+            },
+          },
+          {
+            step: 2,
+            description: "OpenAI structured output parsing",
+            data: {
+              model: "gpt-4o-2024-08-06",
+              systemPrompt: "Extract the event information.",
+              zodSchema: {
+                name: "CalendarEvent",
+                properties: {
+                  name: "string",
+                  date: "string",
+                  participants: "array of strings",
+                },
+              },
+              rawResponse: response,
+            },
+          },
+          {
+            step: 3,
+            description: "Parsed calendar event",
+            data: {
+              extractedEvent: event,
+              validationPassed: true,
+            },
+          },
+        ],
+      },
     });
   } catch (error) {
     console.error("OpenAI API error:", error);

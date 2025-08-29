@@ -10,6 +10,7 @@ import SectionCard from '../ui/SectionCard';
 import TextAreaForm from '../ui/TextAreaForm';
 import ResponseDisplay from '../ui/ResponseDisplay';
 import ErrorDisplay from '../ui/ErrorDisplay';
+import RawDataDisplay from '../ui/RawDataDisplay';
 
 export default function ToolCallingSection() {
     const [toolInput, setToolInput] = useState('');
@@ -49,11 +50,18 @@ export default function ToolCallingSection() {
             />
 
             {toolData && (
-                <ResponseDisplay
-                    data={toolData}
-                    title="Tool Result"
-                    colorScheme="purple"
-                />
+                <>
+                    <ResponseDisplay
+                        data={toolData}
+                        title="Tool Result"
+                        colorScheme="purple"
+                    />
+                    <RawDataDisplay
+                        data={toolData}
+                        title="Raw Tool API Response"
+                        colorScheme="purple"
+                    />
+                </>
             )}
 
             {toolError && <ErrorDisplay error={toolError} />}
