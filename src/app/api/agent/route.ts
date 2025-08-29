@@ -2,6 +2,20 @@ import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod.js";
 import z from "zod";
 
+/*
+ * This API route implements a prompt chaining workflow for processing calendar events.
+ * It uses OpenAI's GPT model to sequentially:
+ * 1. Determine if a message contains calendar event information.
+ * 2. Extract detailed event information if the confidence score is sufficient.
+ * 3. Generate a confirmation message and calendar link for the event.
+ *
+ * The process is designed to strategically use AI at the right steps to ensure accurate results.
+ * Tools are defined for each step, and the workflow is executed in a loop with retries to handle tool calls.
+ * Break down the process and Engineer it in such a way that i can strategically use Ai in the right moment 
+ * in the right order, in order to solve it.
+
+ */
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -209,6 +223,7 @@ export async function POST(request: Request) {
     const maxRetries = 5;
     let retryCount = 0;
     let extractedEventDetails: z.infer<typeof EventDetails> | null = null;
+    let eventInfoResult: z.infer<typeof ExtractEvent> | null = null;
 
     while (
       completion.choices[0]?.message?.tool_calls &&
@@ -245,6 +260,33 @@ export async function POST(request: Request) {
 
             // Execute the function
             const result = await executeFunction(functionName, functionArgs);
+
+            // Store event info result and check confidence score
+            if (functionName === "extractEventInfo") {
+              try {
+                eventInfoResult = JSON.parse(result.output_text);
+                console.log("Event info result:", eventInfoResult);
+
+                // Check confidence score before proceeding
+                if (eventInfoResult && eventInfoResult.confidenceScore < 0.7) {
+                  console.log(
+                    `Low confidence score: ${eventInfoResult.confidenceScore}. Skipping further processing.`
+                  );
+                  // Add a message indicating low confidence
+                  conversationMessages.push({
+                    role: "tool",
+                    tool_call_id: toolCall.id,
+                    content: JSON.stringify({
+                      ...result,
+                      note: `Confidence score ${eventInfoResult.confidenceScore} is below threshold (0.7). Not proceeding with event extraction.`,
+                    }),
+                  });
+                  continue;
+                }
+              } catch (parseError) {
+                console.error("Failed to parse event info result:", parseError);
+              }
+            }
 
             // Store event details for the next function call
             if (functionName === "extractEventDetails") {
@@ -304,6 +346,7 @@ export async function POST(request: Request) {
     return new Response(
       JSON.stringify({
         message: finalMessage,
+        confidenceScore: eventInfoResult?.confidenceScore || null,
       }),
       {
         status: 200,
