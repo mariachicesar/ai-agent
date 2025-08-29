@@ -26,6 +26,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: completion.choices[0]?.message?.content,
       usage: completion.usage,
+      debug: {
+        steps: [
+          {
+            step: 1,
+            description: "Chat completion request",
+            data: {
+              model: model,
+              messagesCount: messages.length,
+              messages: messages,
+              parameters: {
+                max_tokens: 1000,
+                temperature: 0.7,
+              },
+            },
+          },
+          {
+            step: 2,
+            description: "OpenAI response",
+            data: {
+              response: completion,
+              usage: completion.usage,
+            },
+          },
+        ],
+      },
     });
   } catch (error) {
     console.error("OpenAI API error:", error);

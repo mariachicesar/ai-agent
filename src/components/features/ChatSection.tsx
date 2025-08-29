@@ -10,11 +10,12 @@ import SectionCard from '../ui/SectionCard';
 import MessageList from '../ui/MessageList';
 import ChatInput from '../ui/ChatInput';
 import ErrorDisplay from '../ui/ErrorDisplay';
+import RawDataDisplay from '../ui/RawDataDisplay';
 
 export default function ChatSection() {
     const [input, setInput] = useState('');
 
-    const { messages, sendMessage, clearMessages, isLoading, error } = useSWROpenAI({
+    const { messages, sendMessage, clearMessages, isLoading, error, data } = useSWROpenAI({
         model: 'gpt-3.5-turbo'
     });
 
@@ -44,6 +45,24 @@ export default function ChatSection() {
             />
 
             {error && <ErrorDisplay error={error} />}
+
+            {/* Display raw data from the last API call */}
+            {data && (
+                <RawDataDisplay
+                    data={data}
+                    title="Raw Chat API Response (Last Message)"
+                    colorScheme="gray"
+                />
+            )}
+
+            {/* Display all messages in raw format */}
+            {messages.length > 0 && (
+                <RawDataDisplay
+                    data={messages}
+                    title="Raw Messages Array"
+                    colorScheme="gray"
+                />
+            )}
         </SectionCard>
     );
 }

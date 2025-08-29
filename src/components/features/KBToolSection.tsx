@@ -10,6 +10,7 @@ import SectionCard from '../ui/SectionCard';
 import TextAreaForm from '../ui/TextAreaForm';
 import ResponseDisplay from '../ui/ResponseDisplay';
 import ErrorDisplay from '../ui/ErrorDisplay';
+import RawDataDisplay from '../ui/RawDataDisplay';
 
 export default function KnowledgeBaseToolSection() {
     const [input, setInput] = useState('');
@@ -49,11 +50,18 @@ export default function KnowledgeBaseToolSection() {
             />
 
             {toolData && (
-                <ResponseDisplay
-                    data={toolData}
-                    title="Knowledge Base Tool Result"
-                    colorScheme="purple"
-                />
+                <>
+                    <ResponseDisplay
+                        data={toolData}
+                        title="Knowledge Base Tool Result"
+                        colorScheme="purple"
+                    />
+                    <RawDataDisplay
+                        data={toolData}
+                        title="Raw KB Tool API Response"
+                        colorScheme="purple"
+                    />
+                </>
             )}
 
             {toolError && <ErrorDisplay error={toolError} />}

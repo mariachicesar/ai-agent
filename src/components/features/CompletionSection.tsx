@@ -10,6 +10,7 @@ import SectionCard from '../ui/SectionCard';
 import TextAreaForm from '../ui/TextAreaForm';
 import ResponseDisplay from '../ui/ResponseDisplay';
 import ErrorDisplay from '../ui/ErrorDisplay';
+import RawDataDisplay from '../ui/RawDataDisplay';
 
 export default function CompletionSection() {
     const [completionInput, setCompletionInput] = useState('');
@@ -49,11 +50,18 @@ export default function CompletionSection() {
             />
 
             {completionData && (
-                <ResponseDisplay
-                    data={completionData}
-                    title="Completion Result"
-                    colorScheme="green"
-                />
+                <>
+                    <ResponseDisplay
+                        data={completionData}
+                        title="Completion Result"
+                        colorScheme="green"
+                    />
+                    <RawDataDisplay
+                        data={completionData}
+                        title="Raw Completion API Response"
+                        colorScheme="green"
+                    />
+                </>
             )}
 
             {completionError && <ErrorDisplay error={completionError} />}

@@ -10,6 +10,7 @@ import SectionCard from '../ui/SectionCard';
 import TextAreaForm from '../ui/TextAreaForm';
 import ResponseDisplay from '../ui/ResponseDisplay';
 import ErrorDisplay from '../ui/ErrorDisplay';
+import RawDataDisplay from '../ui/RawDataDisplay';
 
 export default function ValidationSection() {
     const [validationInput, setValidationInput] = useState('');
@@ -48,18 +49,25 @@ export default function ValidationSection() {
                 onChange={setValidationInput}
                 onSubmit={handleCompletionValidation}
                 isLoading={validationLoading}
-                placeholder="Enter a prompt for validation..."
+                placeholder="ex. Meeting with John on Friday"
                 buttonText="Validate"
                 loadingText="Validating..."
                 buttonColor="blue"
             />
 
             {validationData && (
-                <ResponseDisplay
-                    data={validationData}
-                    title="Validation Result"
-                    colorScheme="blue"
-                />
+                <>
+                    <ResponseDisplay
+                        data={validationData}
+                        title="Validation Result"
+                        colorScheme="blue"
+                    />
+                    <RawDataDisplay
+                        data={validationData}
+                        title="Raw Validation API Response"
+                        colorScheme="blue"
+                    />
+                </>
             )}
 
             {validationError && <ErrorDisplay error={validationError} />}

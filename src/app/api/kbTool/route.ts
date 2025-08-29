@@ -298,6 +298,7 @@ export async function POST(request: Request) {
         completion.choices[0].message.tool_calls.length
       );
       const toolResults = [];
+      const debugToolExecutions = [];
 
       // Process each function call that OpenAI made
       for (const toolCall of completion.choices[0].message.tool_calls) {
@@ -332,6 +333,16 @@ export async function POST(request: Request) {
             validatedResult.data.source
           );
 
+          // Store debug information
+          debugToolExecutions.push({
+            toolCallId: toolCall.id,
+            functionName: name,
+            arguments: args,
+            result: result,
+            validated: validatedResult.data,
+            status: "success",
+          });
+
           // Add the successful result to our tool results
           // This will be sent back to OpenAI so it can generate a natural language response
           toolResults.push({
@@ -345,6 +356,15 @@ export async function POST(request: Request) {
             error instanceof Error ? error.message : "Unknown error";
 
           console.error("Function execution failed:", errorMessage);
+
+          // Store debug information for errors too
+          debugToolExecutions.push({
+            toolCallId: toolCall.id,
+            functionName: name,
+            arguments: args,
+            error: errorMessage,
+            status: "error",
+          });
 
           // Add error as tool result so OpenAI can handle it appropriately
           toolResults.push({
@@ -376,6 +396,38 @@ export async function POST(request: Request) {
       return Response.json({
         message:
           finalCompletion.choices[0].message.content || "No response generated",
+        debug: {
+          steps: [
+            {
+              step: 1,
+              description: "Initial OpenAI call with KB tool",
+              data: {
+                model: model || "gpt-3.5-turbo",
+                userQuestion: userMessage.content,
+                toolsAvailable: tools.length,
+                response: completion,
+              },
+            },
+            {
+              step: 2,
+              description: "Knowledge base search execution",
+              data: {
+                toolCallsCount:
+                  completion.choices[0].message.tool_calls?.length || 0,
+                toolCalls: completion.choices[0].message.tool_calls,
+                executions: debugToolExecutions,
+              },
+            },
+            {
+              step: 3,
+              description: "Final response generation",
+              data: {
+                model: model || "gpt-3.5-turbo",
+                response: finalCompletion,
+              },
+            },
+          ],
+        },
       });
     }
 
@@ -384,6 +436,21 @@ export async function POST(request: Request) {
     console.log("No function calls made, returning direct response");
     return Response.json({
       message: completion.choices[0].message.content || "No response generated",
+      debug: {
+        steps: [
+          {
+            step: 1,
+            description: "Direct OpenAI response (no KB search needed)",
+            data: {
+              model: model || "gpt-3.5-turbo",
+              userQuestion: userMessage.content,
+              toolsAvailable: tools.length,
+              toolCallsCount: 0,
+              response: completion,
+            },
+          },
+        ],
+      },
     });
   } catch (error) {
     // Catch any unexpected errors and return them gracefully
