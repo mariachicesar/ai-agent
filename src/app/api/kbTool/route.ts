@@ -168,7 +168,7 @@ async function call_function(name: string, args: { question: string }) {
         "No answer found in knowledge base for the given question"
       );
     }
-
+    console.log("Source id:", bestMatch.id);
     // Return structured response that will be validated by Zod schema
     return {
       answer: bestMatch.answer,

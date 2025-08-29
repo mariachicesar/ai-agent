@@ -36,7 +36,7 @@ export default function ToolCallingSection() {
     };
 
     return (
-        <SectionCard title="Tool Calling only for weather inquiries">
+        <SectionCard title="Tool Calling only for Weather + Structure output: OpenAi (LLM) Determines if we must use Weather API">
             <TextAreaForm
                 value={toolInput}
                 onChange={setToolInput}

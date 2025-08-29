@@ -3,6 +3,20 @@ import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
 import { zodTextFormat } from "openai/helpers/zod.js";
 
+/**
+ * Step 1: Define the data models for each stage : What i want to get back from the system
+ * - #1 LLM: Event Extraction basic information : decide if its calendar event
+ * - #2 LLM: Extract the details
+ * - #3 LLM: Generate confirmation message
+ * Step 2: Define the functions :
+ * - eventExtractionFunc: Extracts basic information about the event
+ * - detailExtractionFunc: Extracts detailed information about the event
+ * - confirmationMessageFunc: Generates a confirmation message for the user
+ * Step 3: Chain the functions together
+ * Step 4: Test the chain with a valid input
+ * Step 5: Test the chain with an invalid input
+ */
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -16,7 +30,7 @@ const CalendarEvent = z.object({
 // Step #2: Validate the request and extract event information
 export async function POST(request: NextRequest) {
   try {
-    const { message, model = "gpt-3.5-turbo" } = await request.json();
+    const { message } = await request.json();
 
     if (!message || typeof message !== "string") {
       return NextResponse.json(
