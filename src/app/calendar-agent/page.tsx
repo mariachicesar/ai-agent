@@ -82,7 +82,7 @@ const CalendarAgentPage = () => {
                                     </div>
                                 </div>
                                 <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-                                    Decomposes a task into a sequence of steps, where each LLM call processes the output of the previous one. Trade latency for higher accuracy.
+                                    Breaks down complex tasks into sequential steps where each LLM call builds upon the previous output. Higher accuracy through systematic decomposition.
                                 </p>
                                 <div className="space-y-2 mb-4">
                                     <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">Best for:</div>
@@ -92,10 +92,11 @@ const CalendarAgentPage = () => {
                                     </ul>
                                 </div>
                                 <div className="space-y-2">
-                                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">Examples:</div>
+                                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">Implementation:</div>
                                     <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                                        <li>• Generate marketing copy → translate to different language</li>
-                                        <li>• Write outline → check criteria → write document</li>
+                                        <li>• Step 1: Initial analysis and planning</li>
+                                        <li>• Step 2: Execute based on analysis results</li>
+                                        <li>• Step 3: Validate and refine output</li>
                                     </ul>
                                 </div>
                             </button>
@@ -110,11 +111,11 @@ const CalendarAgentPage = () => {
                                     </div>
                                     <div>
                                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Routing</h3>
-                                        <div className="text-xs text-green-600 dark:text-green-400 font-medium">Smart Classification</div>
+                                        <div className="text-xs text-green-600 dark:text-green-400 font-medium">Calendar Agent</div>
                                     </div>
                                 </div>
                                 <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-                                    Classifies an input and directs it to a specialized follow-up task. Allows separation of concerns and building more specialized prompts.
+                                    Intelligently classifies calendar requests and routes them to specialized handlers for creating or modifying events with structured data extraction.
                                 </p>
                                 <div className="space-y-2 mb-4">
                                     <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">Best for:</div>
@@ -124,10 +125,11 @@ const CalendarAgentPage = () => {
                                     </ul>
                                 </div>
                                 <div className="space-y-2">
-                                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">Examples:</div>
+                                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">Implementation:</div>
                                     <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                                        <li>• Customer service: questions → refunds → tech support</li>
-                                        <li>• Route easy questions to Haiku, hard ones to Sonnet</li>
+                                        <li>• Classify: new_event vs modify_event vs other</li>
+                                        <li>• Extract: event details with Zod validation</li>
+                                        <li>• Route: to appropriate handler function</li>
                                     </ul>
                                 </div>
                             </button>
@@ -142,11 +144,11 @@ const CalendarAgentPage = () => {
                                     </div>
                                     <div>
                                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Parallelization</h3>
-                                        <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">Concurrent Processing</div>
+                                        <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">LLM Guardrails</div>
                                     </div>
                                 </div>
                                 <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-                                    LLMs work simultaneously on tasks through sectioning (independent subtasks) or voting (same task multiple times for diverse outputs).
+                                    Runs multiple independent LLM validation tasks simultaneously to ensure safe and reliable outputs through parallel guardrails and security checks.
                                 </p>
                                 <div className="space-y-2 mb-4">
                                     <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">Best for:</div>
@@ -156,10 +158,11 @@ const CalendarAgentPage = () => {
                                     </ul>
                                 </div>
                                 <div className="space-y-2">
-                                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">Examples:</div>
+                                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">Implementation:</div>
                                     <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                                        <li>• Sectioning: Separate guardrails from core response</li>
-                                        <li>• Voting: Multiple code vulnerability reviews</li>
+                                        <li>• Calendar event validation (parallel with security)</li>
+                                        <li>• Harmful content detection and threat assessment</li>
+                                        <li>• Independent LLM calls with Promise.all()</li>
                                     </ul>
                                 </div>
                             </button>
