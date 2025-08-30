@@ -32,8 +32,8 @@ const NewEventDetails = z.object({
   date: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid date",
   }),
-  duration: z.number().min(1).optional(),
-  participants: z.array(z.string().email()).min(1),
+  duration: z.number().min(1).nullable().optional(),
+  participants: z.array(z.string()),
 });
 
 const ChangeFieldDetails = z.object({
@@ -50,7 +50,7 @@ const ModifyEventDetails = z.object({
 const CalendarResponse = z.object({
   success: z.boolean(),
   message: z.string().min(2).max(500),
-  url: z.string().url().optional(),
+  url: z.string().url().nullable().optional(),
 });
 
 //Define the functions
@@ -80,13 +80,57 @@ const extractEvent = async (userInput: string) => {
   return validatedResponse;
 };
 
-// const newEvent = (data: any): z.infer<typeof NewEventDetails> => {
-//   return NewEventDetails.parse(data);
-// };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const newEvent = async (data: any) => {
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-2024-08-06",
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a helpful AI calendar assistant. Extract the event details from the user's request and return them in the specified format.",
+      },
+      {
+        role: "user",
+        content: `Create a new event with the following details: ${JSON.stringify(
+          data.description
+        )}`,
+      },
+    ],
+    response_format: zodResponseFormat(NewEventDetails, "new_event"),
+  });
 
-// const modifyEvent = (data: any): z.infer<typeof ModifyEventDetails> => {
-//   return ModifyEventDetails.parse(data);
-// };
+  // Parse the JSON response and validate with Zod
+  const jsonResponse = JSON.parse(response.choices[0].message.content || "{}");
+  const validatedResponse = NewEventDetails.parse(jsonResponse);
+
+  return validatedResponse;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const modifyEvent = async (data: any) => {
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-2024-08-06",
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a helpful AI calendar assistant. Modify the event details based on the user's request and return them in the specified format.",
+      },
+      {
+        role: "user",
+        content: `Modify the following event: ${JSON.stringify(data)}`,
+      },
+    ],
+    response_format: zodResponseFormat(ModifyEventDetails, "modify_event"),
+  });
+
+  // Parse the JSON response and validate with Zod
+  const jsonResponse = JSON.parse(response.choices[0].message.content || "{}");
+  const validatedResponse = ModifyEventDetails.parse(jsonResponse);
+
+  return validatedResponse;
+};
 
 // const calendarResponse = (data: any): z.infer<typeof CalendarResponse> => {
 //   return CalendarResponse.parse(data);
@@ -103,12 +147,13 @@ export async function POST(request: Request) {
 
     // Check if it's the messages format (OpenAI chat format)
     if (body.messages && Array.isArray(body.messages)) {
-      // Find the user message
-      const userMessage = body.messages.find(
-        (msg: { role: string; content?: string }) => msg.role === "user"
+      // Find the last user message (most recent)
+      const userMessages = body.messages.filter(
+        (msg: { role: string; content?: string }) =>
+          msg.role === "user" && msg.content
       );
-      if (userMessage && userMessage.content) {
-        userInput = userMessage.content;
+      if (userMessages.length > 0) {
+        userInput = userMessages[userMessages.length - 1].content;
       }
     }
     // Check if it's the direct userInput format
@@ -149,11 +194,76 @@ export async function POST(request: Request) {
     }
 
     const extractedEvent = await extractEvent(userInput);
-    console.log(extractedEvent, "extractedEvent");
+    if (extractedEvent.confidence_score < 0.6) {
+      return Response.json(
+        {
+          success: false,
+          error: "Low confidence score",
+          data: extractedEvent,
+        },
+        { status: 400 }
+      );
+    }
+
+    let eventDetails = null;
+    let responseMessage = `Classification: ${
+      extractedEvent.request_type
+    } (confidence: ${(extractedEvent.confidence_score * 100).toFixed(1)}%)\n`;
+    responseMessage += `Description: ${extractedEvent.description}\n`;
+
+    if (extractedEvent.request_type === "new_event") {
+      eventDetails = await newEvent(extractedEvent);
+      console.log(eventDetails, "newEventData");
+
+      if (eventDetails) {
+        responseMessage += `\n📅 Event Details:\n`;
+        responseMessage += `• Name: ${eventDetails.name}\n`;
+        responseMessage += `• Date: ${eventDetails.date}\n`;
+        if (eventDetails.duration) {
+          responseMessage += `• Duration: ${eventDetails.duration} minutes\n`;
+        }
+        responseMessage += `• Participants: ${eventDetails.participants.join(
+          ", "
+        )}\n`;
+      }
+    } else if (extractedEvent.request_type === "modify_event") {
+      eventDetails = await modifyEvent(extractedEvent);
+      console.log(eventDetails, "modifyEventData");
+
+      if (eventDetails) {
+        responseMessage += `\n📝 Modify Event Details:\n`;
+        responseMessage += `• Event: ${eventDetails.event}\n`;
+        responseMessage += `• Changes: ${eventDetails.changes
+          .map((c) => `${c.field} → ${c.new_value}`)
+          .join(", ")}\n`;
+        responseMessage += `• Participants: ${eventDetails.participants.join(
+          ", "
+        )}\n`;
+      }
+    } else {
+      responseMessage += `\nThis request doesn't appear to be calendar-related.`;
+    }
 
     return Response.json({
-      success: true,
-      data: extractedEvent,
+      message: responseMessage,
+      confidenceScore: extractedEvent.confidence_score,
+      classification: extractedEvent,
+      eventDetails: eventDetails,
+      // Add calendar link for new events
+      calendarLink:
+        eventDetails &&
+        extractedEvent.request_type === "new_event" &&
+        "name" in eventDetails &&
+        "date" in eventDetails
+          ? `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+              eventDetails.name
+            )}&dates=${encodeURIComponent(
+              new Date(eventDetails.date)
+                .toISOString()
+                .replace(/[-:]/g, "")
+                .replace(/\.\d{3}/, "")
+            )}`
+          : undefined,
     });
   } catch (error) {
     console.error("Error in routing API:", error);
