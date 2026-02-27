@@ -1,7 +1,23 @@
-import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
-import z from "zod";
-import { zodTextFormat } from "openai/helpers/zod.js";
+import { extractCalendarEvent } from "@/lib/orchestrator/calendarEventOrchestrator";
+import jwt from "jsonwebtoken";
+
+// Example dangerous keywords to block
+const DANGEROUS_KEYWORDS = [
+  "delete",
+  "drop table",
+  "shutdown",
+  "format disk",
+  "rm -rf",
+  "truncate",
+  "sudo",
+  "system(",
+  "exec(",
+];
+
+// Example quota store (in-memory for demo; use Redis or DB in prod)
+const quotaStore = new Map();
+const QUOTA_LIMIT = 100; // max requests per user per day
 
 /**
  * Step 1: Define the data models for each stage : What i want to get back from the system
@@ -17,17 +33,33 @@ import { zodTextFormat } from "openai/helpers/zod.js";
  * Step 5: Test the chain with an invalid input
  */
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// --- Gateway Helper Functions ---
+function isDangerous(message: string): boolean {
+  return DANGEROUS_KEYWORDS.some((kw) => message.toLowerCase().includes(kw));
+}
 
-const CalendarEvent = z.object({
-  name: z.string(),
-  date: z.string(),
-  participants: z.array(z.string()),
-});
+function getUserIdFromJWT(token: string): string | null {
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "demo_secret",
+    ) as any;
+    return decoded.sub || decoded.id || decoded.user || "anonymous";
+  } catch {
+    return null;
+  }
+}
 
-// Step #2: Validate the request and extract event information
+function checkQuota(userId: string): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  const quotaKey = `${userId}:${today}`;
+  const used = quotaStore.get(quotaKey) || 0;
+  if (used >= QUOTA_LIMIT) return false;
+  quotaStore.set(quotaKey, used + 1);
+  return true;
+}
+
+// --- Main Gateway Handler ---
 export async function POST(request: NextRequest) {
   try {
     const { message } = await request.json();
@@ -35,71 +67,58 @@ export async function POST(request: NextRequest) {
     if (!message || typeof message !== "string") {
       return NextResponse.json(
         { error: "Message is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const response = await openai.responses.parse({
-      model: "gpt-4o-2024-08-06",
-      input: [
-        { role: "system", content: "Extract the event information." },
+    // 1. Block dangerous calls
+    if (isDangerous(message)) {
+      return NextResponse.json(
         {
-          role: "user",
-          content: message,
+          error:
+            "Request contains potentially dangerous content and was blocked.",
         },
-      ],
-      text: {
-        format: zodTextFormat(CalendarEvent, "event"),
-      },
-    });
+        { status: 400 },
+      );
+    }
 
-    const event = response.output_parsed;
+    // 2. Authenticate JWT (Authorization: Bearer <token>)
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { error: "Missing or invalid Authorization header" },
+        { status: 401 },
+      );
+    }
+    const token = authHeader.replace("Bearer ", "");
+    const userId = getUserIdFromJWT(token);
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401 },
+      );
+    }
+
+    // 3. Enforce quota (per user, per day)
+    if (!checkQuota(userId)) {
+      return NextResponse.json(
+        { error: "Quota exceeded. Please try again tomorrow." },
+        { status: 429 },
+      );
+    }
+
+    // 4. Call orchestrator
+    const { event, debug } = await extractCalendarEvent(message);
 
     return NextResponse.json({
-      message: event, //now we can use the extracted event information to create a calendar event and build systems around it
-      debug: {
-        steps: [
-          {
-            step: 1,
-            description: "Input validation",
-            data: {
-              userMessage: message,
-              messageType: typeof message,
-            },
-          },
-          {
-            step: 2,
-            description: "OpenAI structured output parsing",
-            data: {
-              model: "gpt-4o-2024-08-06",
-              systemPrompt: "Extract the event information.",
-              zodSchema: {
-                name: "CalendarEvent",
-                properties: {
-                  name: "string",
-                  date: "string",
-                  participants: "array of strings",
-                },
-              },
-              rawResponse: response,
-            },
-          },
-          {
-            step: 3,
-            description: "Parsed calendar event",
-            data: {
-              extractedEvent: event,
-              validationPassed: true,
-            },
-          },
-        ],
-      },
+      message: event,
+      debug,
     });
   } catch (error) {
     console.error("OpenAI API error:", error);
     return NextResponse.json(
       { error: "Failed to generate response" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -37,3 +37,16 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 Step 2: Structure Output Validation
 Step 3: Function calling - Tools https://platform.openai.com/docs/guides/function-calling
+
+## New: Payments Ops Agent (Interview MVP)
+
+- UI: `/payments-ops`
+- Design + setup guide: `docs/payments-ops-agent.md`
+- Workflow study notes (gateway/orchestrator/A2A/MCP/JSON-RPC): `docs/payments-ops-workflow-notes.md`
+- Includes OIDC auth checks, Apigee header governance, Bedrock orchestration, Stripe MCP policy, HITL approvals, and webhook/job processing.
+
+## New: Payments Ops Interview Lab
+
+- Interview UI: `/payments-ops-interview`
+- Self-build guide + tasks + rubric: `docs/payments-ops-interview-readme.md`
+- Goal: practice by implementing gateway/orchestrator/tool-calling/approval/job-flow yourself and testing via manual requests.

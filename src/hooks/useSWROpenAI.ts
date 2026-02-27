@@ -28,12 +28,18 @@ interface ValidationRequest {
 // Fetcher function for useSWRMutation
 async function sendChatRequest(
   url: string,
-  { arg }: { arg: ChatRequest | ValidationRequest }
+  { arg }: { arg: ChatRequest | ValidationRequest },
 ): Promise<ChatResponse> {
+  // TODO: Replace with real JWT token retrieval logic
+  const jwtToken =
+    typeof window !== "undefined"
+      ? localStorage.getItem("jwtToken") || "demo.jwt.token"
+      : "demo.jwt.token";
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${jwtToken}`,
     },
     body: JSON.stringify(arg),
   });
@@ -94,7 +100,7 @@ export function useSWROpenAI(options: UseSWROpenAIOptions = {}) {
         throw err;
       }
     },
-    [messages, trigger, options.model]
+    [messages, trigger, options.model],
   );
 
   const clearMessages = useCallback(() => {
@@ -126,7 +132,7 @@ export function useSWRCompletion(options: UseSWROpenAIOptions = {}) {
   const complete = useCallback(
     async (
       prompt: string,
-      systemMessage?: string
+      systemMessage?: string,
     ): Promise<ChatResponse | undefined> => {
       const messages: Message[] = [];
 
@@ -141,7 +147,7 @@ export function useSWRCompletion(options: UseSWROpenAIOptions = {}) {
         model: options.model || "gpt-3.5-turbo",
       });
     },
-    [trigger, options.model]
+    [trigger, options.model],
   );
 
   return {
@@ -152,7 +158,7 @@ export function useSWRCompletion(options: UseSWROpenAIOptions = {}) {
     reset,
   };
 }
-
+// Gateway Call
 // Step #2: Hook for validation output using SWR
 export function useSWRValidation(options: UseSWROpenAIOptions = {}) {
   const {
@@ -170,7 +176,7 @@ export function useSWRValidation(options: UseSWROpenAIOptions = {}) {
         model: options.model || "gpt-3.5-turbo",
       });
     },
-    [trigger, options.model]
+    [trigger, options.model],
   );
 
   return {
@@ -182,6 +188,7 @@ export function useSWRValidation(options: UseSWROpenAIOptions = {}) {
   };
 }
 
+// Orchostration Call
 // Step #3: Hook for tool calling using SWR
 export function useSWRTool(options: UseSWROpenAIOptions = {}) {
   const {
@@ -202,7 +209,7 @@ export function useSWRTool(options: UseSWROpenAIOptions = {}) {
         model: options.model || "gpt-3.5-turbo",
       });
     },
-    [trigger, options.model]
+    [trigger, options.model],
   );
 
   return {
@@ -234,7 +241,7 @@ export function useSWRKBTool(options: UseSWROpenAIOptions = {}) {
         model: options.model || "gpt-3.5-turbo",
       });
     },
-    [trigger, options.model]
+    [trigger, options.model],
   );
 
   return {
